@@ -1,0 +1,19 @@
+{
+  "name": "HouseHold",
+  "short_name": "HouseHold",
+  "description": "Agenda, klusjes en boodschappen van het hele gezin op één plek.",
+  "id": "/HouseHold/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF7EF",
+  "theme_color": "#14706F",
+  "lang": "nl",
+  "icons": [
+    { "src": "icons/icon-192.png",          "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png",          "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
