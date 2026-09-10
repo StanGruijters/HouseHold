@@ -1,0 +1,301 @@
+-- ============================================================
+-- HouseHold — fase 1: accounts, huishoudens, leden, uitnodigingen
+-- Plak dit volledig in de Supabase SQL Editor en klik Run.
+-- Je mag dit script meerdere keren draaien; het is herhaalbaar.
+-- ============================================================
+
+create extension if not exists pgcrypto;
+
+-- ------------------------------------------------------------
+-- 1. Tabellen
+-- ------------------------------------------------------------
+
+create table if not exists public.households (
+  id                  uuid primary key default gen_random_uuid(),
+  naam                text not null,
+  goedkeuring_vereist boolean not null default true,
+  aangemaakt_door     uuid not null references auth.users(id),
+  created_at          timestamptz not null default now()
+);
+
+create table if not exists public.household_members (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  naam         text,
+  email        text,
+  avatar_url   text,
+  kleur        text not null default '#2F6B5E',
+  rol          text not null default 'lid'      check (rol in ('beheerder','lid')),
+  status       text not null default 'wachtend' check (status in ('wachtend','actief')),
+  created_at   timestamptz not null default now(),
+  unique (household_id, user_id)
+);
+
+create index if not exists household_members_user_idx on public.household_members (user_id);
+
+create table if not exists public.household_invites (
+  id              uuid primary key default gen_random_uuid(),
+  household_id    uuid not null references public.households(id) on delete cascade,
+  code            text not null unique,
+  aangemaakt_door uuid not null references auth.users(id),
+  verloopt_op     timestamptz not null default (now() + interval '7 days'),
+  gebruikt_door   uuid references auth.users(id),
+  gebruikt_op     timestamptz,
+  created_at      timestamptz not null default now()
+);
+
+-- Refresh tokens van Google. Deze tabel krijgt bewust GEEN leespolicy,
+-- dus niemand kan hem via de app uitlezen — alleen Edge Functions
+-- met de service role key komen erbij. Dat is fase 4.
+create table if not exists public.google_tokens (
+  user_id       uuid primary key references auth.users(id) on delete cascade,
+  refresh_token text not null,
+  updated_at    timestamptz not null default now()
+);
+
+-- ------------------------------------------------------------
+-- 2. Hulpfuncties
+--
+-- "security definer" betekent: de functie draait met de rechten van de
+-- eigenaar, niet van de gebruiker. Daardoor mag hij in de ledentabel
+-- kijken zonder dat de policies zichzelf in een oneindige lus roepen.
+-- ------------------------------------------------------------
+
+create or replace function public.is_betrokken(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from household_members m
+    where m.household_id = hid and m.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_actief_lid(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from household_members m
+    where m.household_id = hid and m.user_id = auth.uid() and m.status = 'actief'
+  );
+$$;
+
+create or replace function public.is_beheerder(hid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from household_members m
+    where m.household_id = hid and m.user_id = auth.uid()
+      and m.status = 'actief' and m.rol = 'beheerder'
+  );
+$$;
+
+-- ------------------------------------------------------------
+-- 3. Row Level Security
+--
+-- Regel voor het hele project: de app mag alleen LEZEN.
+-- Alles wat wijzigt gaat via de functies in blok 4, zodat de
+-- controles op één plek staan.
+-- ------------------------------------------------------------
+
+alter table public.households        enable row level security;
+alter table public.household_members enable row level security;
+alter table public.household_invites enable row level security;
+alter table public.google_tokens     enable row level security;
+
+drop policy if exists "huishouden lezen" on public.households;
+create policy "huishouden lezen" on public.households
+  for select using (is_betrokken(id));
+
+drop policy if exists "leden lezen" on public.household_members;
+create policy "leden lezen" on public.household_members
+  for select using (is_betrokken(household_id));
+
+drop policy if exists "uitnodigingen lezen" on public.household_invites;
+create policy "uitnodigingen lezen" on public.household_invites
+  for select using (is_beheerder(household_id));
+
+-- ------------------------------------------------------------
+-- 4. Acties
+-- ------------------------------------------------------------
+
+-- Huishouden aanmaken. De maker wordt automatisch beheerder.
+create or replace function public.maak_huishouden(p_naam text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_id uuid; v_email text; v_naam text; v_avatar text;
+begin
+  if auth.uid() is null then raise exception 'Je bent niet ingelogd'; end if;
+  if coalesce(trim(p_naam), '') = '' then raise exception 'Geef het huishouden een naam'; end if;
+
+  select u.email,
+         coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', u.email),
+         u.raw_user_meta_data->>'avatar_url'
+    into v_email, v_naam, v_avatar
+    from auth.users u where u.id = auth.uid();
+
+  insert into households (naam, aangemaakt_door)
+  values (trim(p_naam), auth.uid())
+  returning id into v_id;
+
+  insert into household_members (household_id, user_id, naam, email, avatar_url, rol, status)
+  values (v_id, auth.uid(), v_naam, v_email, v_avatar, 'beheerder', 'actief');
+
+  return v_id;
+end; $$;
+
+-- Uitnodigingscode maken. Eenmalig bruikbaar, 7 dagen geldig.
+create or replace function public.maak_uitnodiging(p_household_id uuid)
+returns text language plpgsql security definer set search_path = public as $$
+declare v_code text; v_poging int := 0;
+begin
+  if not is_beheerder(p_household_id) then
+    raise exception 'Alleen een beheerder kan iemand uitnodigen';
+  end if;
+
+  loop
+    v_poging := v_poging + 1;
+    v_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+    exit when not exists (select 1 from household_invites i where i.code = v_code);
+    if v_poging > 10 then raise exception 'Kon geen code genereren, probeer opnieuw'; end if;
+  end loop;
+
+  insert into household_invites (household_id, code, aangemaakt_door)
+  values (p_household_id, v_code, auth.uid());
+
+  return v_code;
+end; $$;
+
+-- Deelnemen met een code.
+create or replace function public.deelnemen_met_code(p_code text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_inv household_invites; v_goedkeuring boolean; v_status text;
+  v_email text; v_naam text; v_avatar text;
+begin
+  if auth.uid() is null then raise exception 'Je bent niet ingelogd'; end if;
+
+  select * into v_inv from household_invites
+   where code = upper(trim(p_code)) and gebruikt_op is null and verloopt_op > now();
+  if not found then
+    raise exception 'Deze code bestaat niet, is al gebruikt of is verlopen';
+  end if;
+
+  if exists (select 1 from household_members m
+              where m.household_id = v_inv.household_id and m.user_id = auth.uid()) then
+    raise exception 'Je hoort al bij dit huishouden';
+  end if;
+
+  select goedkeuring_vereist into v_goedkeuring from households where id = v_inv.household_id;
+  v_status := case when v_goedkeuring then 'wachtend' else 'actief' end;
+
+  select u.email,
+         coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', u.email),
+         u.raw_user_meta_data->>'avatar_url'
+    into v_email, v_naam, v_avatar
+    from auth.users u where u.id = auth.uid();
+
+  insert into household_members (household_id, user_id, naam, email, avatar_url, rol, status)
+  values (v_inv.household_id, auth.uid(), v_naam, v_email, v_avatar, 'lid', v_status);
+
+  update household_invites
+     set gebruikt_op = now(), gebruikt_door = auth.uid()
+   where id = v_inv.id;
+
+  return jsonb_build_object('household_id', v_inv.household_id, 'status', v_status);
+end; $$;
+
+-- Wachtend lid goedkeuren.
+create or replace function public.keur_lid_goed(p_member_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_hid uuid;
+begin
+  select household_id into v_hid from household_members where id = p_member_id;
+  if v_hid is null then raise exception 'Dit lid bestaat niet'; end if;
+  if not is_beheerder(v_hid) then raise exception 'Alleen een beheerder kan leden goedkeuren'; end if;
+
+  update household_members set status = 'actief' where id = p_member_id;
+end; $$;
+
+-- Beheerder maken of terugzetten naar lid.
+create or replace function public.wijzig_rol(p_member_id uuid, p_rol text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_hid uuid; v_huidige text; v_aantal int;
+begin
+  if p_rol not in ('beheerder','lid') then raise exception 'Onbekende rol'; end if;
+
+  select household_id, rol into v_hid, v_huidige from household_members where id = p_member_id;
+  if v_hid is null then raise exception 'Dit lid bestaat niet'; end if;
+  if not is_beheerder(v_hid) then raise exception 'Alleen een beheerder kan rollen wijzigen'; end if;
+
+  if v_huidige = 'beheerder' and p_rol = 'lid' then
+    select count(*) into v_aantal from household_members
+     where household_id = v_hid and rol = 'beheerder' and status = 'actief';
+    if v_aantal <= 1 then
+      raise exception 'Er moet minstens één beheerder overblijven';
+    end if;
+  end if;
+
+  update household_members set rol = p_rol, status = 'actief' where id = p_member_id;
+end; $$;
+
+-- Lid verwijderen of afwijzen. Je mag ook jezelf verwijderen.
+create or replace function public.verwijder_lid(p_member_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_hid uuid; v_user uuid; v_rol text; v_aantal int;
+begin
+  select household_id, user_id, rol into v_hid, v_user, v_rol
+    from household_members where id = p_member_id;
+  if v_hid is null then raise exception 'Dit lid bestaat niet'; end if;
+
+  if not (is_beheerder(v_hid) or v_user = auth.uid()) then
+    raise exception 'Je mag alleen jezelf verwijderen';
+  end if;
+
+  if v_rol = 'beheerder' then
+    select count(*) into v_aantal from household_members
+     where household_id = v_hid and rol = 'beheerder' and status = 'actief';
+    if v_aantal <= 1 then
+      raise exception 'Maak eerst iemand anders beheerder';
+    end if;
+  end if;
+
+  delete from household_members where id = p_member_id;
+end; $$;
+
+-- Je eigen weergavenaam en kleur aanpassen.
+create or replace function public.update_mijn_profiel(p_household_id uuid, p_naam text, p_kleur text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_betrokken(p_household_id) then raise exception 'Je hoort niet bij dit huishouden'; end if;
+  if coalesce(trim(p_naam), '') = '' then raise exception 'Vul een naam in'; end if;
+  if p_kleur !~ '^#[0-9A-Fa-f]{6}$' then raise exception 'Ongeldige kleur'; end if;
+
+  update household_members
+     set naam = trim(p_naam), kleur = p_kleur
+   where household_id = p_household_id and user_id = auth.uid();
+end; $$;
+
+-- Aan- of uitzetten of nieuwe leden goedgekeurd moeten worden.
+create or replace function public.zet_goedkeuring(p_household_id uuid, p_waarde boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_beheerder(p_household_id) then raise exception 'Alleen een beheerder kan dit wijzigen'; end if;
+  update households set goedkeuring_vereist = p_waarde where id = p_household_id;
+end; $$;
+
+-- Google refresh token opslaan. De app schrijft hier alleen naartoe.
+create or replace function public.bewaar_google_token(p_refresh_token text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Je bent niet ingelogd'; end if;
+  if coalesce(trim(p_refresh_token), '') = '' then return; end if;
+
+  insert into google_tokens (user_id, refresh_token, updated_at)
+  values (auth.uid(), p_refresh_token, now())
+  on conflict (user_id) do update
+    set refresh_token = excluded.refresh_token, updated_at = now();
+end; $$;
+
+-- Controleren of jouw Google-koppeling al bekend is (zonder het token te tonen).
+create or replace function public.heb_ik_google_token()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from google_tokens t where t.user_id = auth.uid());
+$$;
