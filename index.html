@@ -44,7 +44,6 @@
   .kaart h3{margin-bottom:4px}
   .kaart p{font-size:.9rem;margin-bottom:16px}
   .kaart.tint{background:var(--geel-zacht);border-color:#F2E4B8}
-  .kaart.strak{padding:14px 16px}
 
   /* ---- knoppen ---- */
   button{font-family:inherit;font-size:1rem;cursor:pointer;border:0;border-radius:12px}
@@ -55,7 +54,7 @@
   .knop.oranje:hover{background:#DD7C00}
   .knop.licht{background:#fff;color:var(--inkt);border:1.5px solid var(--lijn)}
   .knop.licht:hover{background:var(--teal-zacht);border-color:var(--teal)}
-  .knop:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--geel);outline-offset:2px}
+  .knop:focus-visible,input:focus-visible,select:focus-visible,.tegel:focus-visible{outline:3px solid var(--geel);outline-offset:2px}
   .mini{padding:8px 14px;font-size:.85rem;font-weight:700;background:#fff;
         border:1.5px solid var(--lijn);color:var(--inkt);border-radius:10px}
   .mini:hover{background:var(--teal-zacht)}
@@ -97,6 +96,28 @@
   .kleuren{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
   .kleuren button{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
   .kleuren button[aria-pressed=true]{border-color:var(--inkt)}
+  .kleuren.klein button{width:26px;height:26px;border-width:2px}
+
+  /* ---- tegels ---- */
+  .tegels{columns:2;column-gap:12px;margin-top:4px}
+  .tegel{display:block;width:100%;break-inside:avoid;margin:0 0 12px;padding:14px;
+         border-radius:16px;border:1.5px solid;cursor:pointer;background:#fff}
+  .tegel:active{transform:scale(.98)}
+  .tegel-kop{display:flex;align-items:center;gap:8px}
+  .tegel-emoji{font-size:1.35rem;line-height:1}
+  .tegel-naam{font-family:Nunito,sans-serif;font-weight:800;font-size:.98rem;
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tegel-aantal{font-size:.74rem;font-weight:700;margin-top:3px}
+  .preview{list-style:none;margin-top:10px;font-size:.86rem}
+  .preview li{padding:4px 0;border-top:1px solid rgba(22,64,63,.08);
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .preview li.meer,.preview li.leegje{color:var(--grijs);font-weight:600;font-size:.8rem}
+  .preview li.leegje{border-top:0;padding-top:6px}
+
+  .terug{background:none;color:var(--grijs);font-weight:700;font-size:.9rem;padding:0 0 12px}
+  .detail-kop{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:16px;
+              border:1.5px solid;margin-bottom:14px}
+  .detail-kop .tegel-emoji{font-size:1.6rem}
 
   /* ---- boodschappen ---- */
   .toevoegrij{display:flex;gap:8px}
@@ -104,24 +125,12 @@
   .toevoegrij button{flex:0 0 52px;background:var(--oranje);color:#fff;font-size:1.5rem;font-weight:700;
                      border-radius:12px;line-height:1}
   .toevoegrij button:hover{background:#DD7C00}
-  .winkelkeuze{margin:12px 0 0;font-size:.92rem;padding:10px 12px}
 
   .snelrij{display:flex;gap:8px;overflow-x:auto;padding:14px 0 2px;scrollbar-width:none}
   .snelrij::-webkit-scrollbar{display:none}
   .snel{flex:0 0 auto;padding:7px 13px;font-size:.85rem;font-weight:600;background:#fff;
         border:1.5px solid var(--lijn);border-radius:20px;white-space:nowrap}
   .snel:hover{background:var(--geel-zacht);border-color:var(--geel)}
-
-  .filters{display:flex;gap:8px;overflow-x:auto;margin:18px 0 6px;padding-bottom:4px;scrollbar-width:none}
-  .filters::-webkit-scrollbar{display:none}
-  .filter{flex:0 0 auto;padding:8px 15px;font-size:.88rem;font-weight:700;background:#fff;
-          border:1.5px solid var(--lijn);border-radius:22px;white-space:nowrap;color:var(--inkt)}
-  .filter[aria-pressed=true]{background:var(--teal-diep);border-color:var(--teal-diep);color:#fff}
-
-  .groep{margin-top:18px}
-  .groep-kop{display:flex;align-items:baseline;gap:8px;font-family:Nunito,sans-serif;font-weight:800;
-             font-size:.95rem;margin:0 0 6px 4px}
-  .groep-kop small{font-weight:600;color:var(--grijs);font-size:.8rem}
 
   .item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;
         border:1px solid var(--lijn);border-radius:14px;margin-bottom:8px}
@@ -134,7 +143,9 @@
   .item-tekst em{font-style:normal;color:var(--grijs);font-weight:600;font-size:.85rem;margin-left:6px}
   .ikoon{flex:0 0 auto;padding:4px 6px;background:none;font-size:1.05rem;line-height:1;opacity:.45}
   .ikoon.aan{opacity:1}
-  .leeg{text-align:center;color:var(--grijs);padding:36px 10px;font-size:.92rem}
+  .leeg{text-align:center;color:var(--grijs);padding:30px 10px;font-size:.92rem}
+  .kopje{font-family:Nunito,sans-serif;font-weight:800;font-size:.82rem;color:var(--grijs);
+         margin:20px 0 8px 4px}
 
   /* ---- navigatiebalk ---- */
   .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--lijn);
@@ -155,6 +166,7 @@
   .voet button{background:none;color:var(--grijs);font-size:.85rem;font-weight:600;text-decoration:underline}
   @media (prefers-reduced-motion:no-preference){
     .melding{animation:op .22s ease-out}
+    .tegel{transition:transform .12s}
     @keyframes op{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
   }
 </style>
@@ -224,29 +236,8 @@
 
   <!-- boodschappen -->
   <section id="s-boodschappen" class="verborgen">
-    <div class="kop">
-      <img src="icons/beeldmerk-transparant.png" alt="" onerror="this.style.display='none'">
-      <div>
-        <h1>Boodschappen</h1>
-        <div class="kop-sub" id="bood-sub"></div>
-      </div>
-    </div>
-
-    <div class="kaart strak">
-      <div class="toevoegrij">
-        <input type="text" id="item-invoer" placeholder="Wat is er nodig?" autocomplete="off">
-        <button onclick="voegItemToe()" aria-label="Toevoegen">+</button>
-      </div>
-      <select class="winkelkeuze" id="winkel-keuze" aria-label="Winkel"></select>
-    </div>
-
-    <div class="snelrij" id="snelrij"></div>
-    <div class="filters" id="filters"></div>
-    <div id="lijst"></div>
-
-    <div id="opruimen" class="verborgen" style="margin-top:18px">
-      <button class="knop licht" onclick="wisAfgevinkt()">Afgevinkte boodschappen wissen</button>
-    </div>
+    <div id="bood-kop"></div>
+    <div id="bood-inhoud"></div>
   </section>
 
   <!-- huishouden -->
@@ -282,9 +273,9 @@
 
     <div class="kaart">
       <h3>Winkels</h3>
-      <p>Deze winkels kun je kiezen bij een boodschap.</p>
+      <p>Geef ze de naam die jullie thuis gebruiken — Jumbo in plaats van Supermarkt.</p>
       <div id="lijst-winkels"></div>
-      <div class="toevoegrij" style="margin-top:12px">
+      <div class="toevoegrij" style="margin-top:14px">
         <input type="text" id="winkel-invoer" placeholder="Nieuwe winkel" autocomplete="off">
         <button onclick="voegWinkelToe()" aria-label="Winkel toevoegen">+</button>
       </div>
@@ -338,7 +329,10 @@ const KLEUREN = ['#249C9C','#F58A00','#63B455','#FBD024','#E2603A','#14706F','#9
 
 let gebruiker = null, lidmaatschappen = [], huidig = null, huishouden = null, leden = [];
 let winkels = [], items = [], favorieten = [];
-let filterShop = 'alles', laatsteCode = '', kanaal = null;
+let openTegel = null;          // null = raster, anders een winkel-id of 'overig'
+let winkelBewerk = null;       // id van de winkel die je aan het hernoemen bent
+let bewerkKleur = null;
+let laatsteCode = '', kanaal = null;
 let actieveTab = 's-boodschappen';
 
 /* ============================================================
@@ -431,7 +425,6 @@ async function laadBoodschappen(){
   }
   winkels = w.data || []; items = i.data || []; favorieten = f.data || [];
 
-  // eerste keer: standaardwinkels aanmaken
   if(winkels.length === 0){
     const { error } = await sb.rpc('maak_standaard_winkels', { p_household_id: hid });
     if(!error){
@@ -454,59 +447,106 @@ function startRealtime(){
 }
 
 /* ============================================================
-   4. Boodschappen tekenen
+   4. Boodschappen: tegels en detail
    ============================================================ */
+function groepen(){
+  const g = winkels.map(w => ({ id:w.id, naam:w.naam, emoji:w.emoji, kleur:w.kleur || '#63B455' }));
+  g.push({ id:'overig', naam:'Overig', emoji:'📦', kleur:'#6E7A78' });
+  return g;
+}
+
+function itemsVan(id, afgevinkt){
+  return items.filter(i => (i.shop_id || 'overig') === id && !!i.checked === afgevinkt);
+}
+
 function tekenBoodschappen(){
+  if(openTegel) tekenDetail(); else tekenRaster();
+}
+
+function tekenRaster(){
   const open = items.filter(i => !i.checked);
-  const af   = items.filter(i => i.checked);
-  document.getElementById('bood-sub').textContent =
-    open.length === 0 ? 'Niets nodig' :
-    open.length + (open.length === 1 ? ' ding nodig' : ' dingen nodig');
+  document.getElementById('bood-kop').innerHTML = `
+    <div class="kop">
+      <img src="icons/beeldmerk-transparant.png" alt="" onerror="this.style.display='none'">
+      <div>
+        <h1>Boodschappen</h1>
+        <div class="kop-sub">${open.length === 0 ? 'Niets nodig'
+          : open.length + (open.length === 1 ? ' ding nodig' : ' dingen nodig')}</div>
+      </div>
+    </div>`;
 
-  // winkelkeuze bij het invoerveld
-  const keuze = document.getElementById('winkel-keuze');
-  const vorige = keuze.value;
-  keuze.innerHTML = '<option value="">Geen winkel</option>' +
-    winkels.map(w => `<option value="${w.id}">${esc(w.emoji)} ${esc(w.naam)}</option>`).join('');
-  if(vorige && winkels.some(w => w.id === vorige)) keuze.value = vorige;
-  else if(filterShop !== 'alles' && filterShop !== 'overig') keuze.value = filterShop;
+  const tegels = groepen().map(g => {
+    const o = itemsVan(g.id, false), a = itemsVan(g.id, true);
+    if(g.id === 'overig' && o.length === 0 && a.length === 0) return '';
 
-  // vaste producten die nog niet op de lijst staan
-  const opLijst = new Set(open.map(i => i.naam.toLowerCase()));
-  const snel = favorieten.filter(f => !opLijst.has(f.naam.toLowerCase()));
-  document.getElementById('snelrij').innerHTML = snel.map(f =>
-    `<button class="snel" onclick="voegFavorietToe('${esc(f.naam)}','${f.shop_id || ''}')">+ ${esc(f.naam)}</button>`
-  ).join('');
+    const toon = o.slice(0, 4);
+    let lijst = toon.map(i => `<li>${esc(i.naam)}${i.aantal ? ` <span style="color:var(--grijs)">${esc(i.aantal)}</span>` : ''}</li>`).join('');
+    if(o.length > 4) lijst += `<li class="meer">+ ${o.length - 4} meer</li>`;
+    if(o.length === 0) lijst = `<li class="leegje">${a.length ? 'Alles afgevinkt' : 'Niets nodig'}</li>`;
 
-  // filterknoppen
-  const telPer = id => open.filter(i => (i.shop_id || 'overig') === id).length;
-  let fh = `<button class="filter" aria-pressed="${filterShop === 'alles'}" onclick="zetFilter('alles')">Alles ${open.length ? '· ' + open.length : ''}</button>`;
-  fh += winkels.map(w =>
-    `<button class="filter" aria-pressed="${filterShop === w.id}" onclick="zetFilter('${w.id}')">${esc(w.emoji)} ${esc(w.naam)}${telPer(w.id) ? ' · ' + telPer(w.id) : ''}</button>`).join('');
-  if(items.some(i => !i.shop_id))
-    fh += `<button class="filter" aria-pressed="${filterShop === 'overig'}" onclick="zetFilter('overig')">📦 Overig${telPer('overig') ? ' · ' + telPer('overig') : ''}</button>`;
-  document.getElementById('filters').innerHTML = fh;
+    return `<div class="tegel" role="button" tabindex="0"
+        style="background:${tint(g.kleur,.09)};border-color:${tint(g.kleur,.4)}"
+        onclick="openWinkel('${g.id}')" onkeydown="if(event.key==='Enter')openWinkel('${g.id}')">
+        <div class="tegel-kop">
+          <span class="tegel-emoji">${esc(g.emoji)}</span>
+          <span class="tegel-naam">${esc(g.naam)}</span>
+        </div>
+        <div class="tegel-aantal" style="color:${donker(g.kleur)}">
+          ${o.length ? o.length + (o.length === 1 ? ' ding' : ' dingen') : 'leeg'}
+          ${a.length ? ` · ${a.length} af` : ''}</div>
+        <ul class="preview">${lijst}</ul>
+      </div>`;
+  }).join('');
 
-  // groepen
-  const groepen = winkels.map(w => ({ id:w.id, titel:`${w.emoji} ${w.naam}` }));
-  if(items.some(i => !i.shop_id)) groepen.push({ id:'overig', titel:'📦 Overig' });
+  document.getElementById('bood-inhoud').innerHTML = `<div class="tegels">${tegels}</div>`;
+}
 
-  let html = '';
-  groepen.forEach(g => {
-    if(filterShop !== 'alles' && filterShop !== g.id) return;
-    const groepOpen = open.filter(i => (i.shop_id || 'overig') === g.id);
-    const groepAf   = af.filter(i => (i.shop_id || 'overig') === g.id);
-    if(groepOpen.length === 0 && groepAf.length === 0) return;
+function tekenDetail(){
+  const g = groepen().find(x => x.id === openTegel);
+  if(!g){ openTegel = null; tekenRaster(); return; }
 
-    html += `<div class="groep"><div class="groep-kop">${esc(g.titel)}
-      ${groepAf.length ? `<small>${groepAf.length} afgevinkt</small>` : ''}</div>`;
-    html += groepOpen.map(rij).join('') + groepAf.map(rij).join('');
-    html += '</div>';
-  });
+  const o = itemsVan(g.id, false), a = itemsVan(g.id, true);
 
-  document.getElementById('lijst').innerHTML = html ||
-    `<div class="leeg">Nog niets op de lijst.<br>Typ hierboven wat je nodig hebt.</div>`;
-  document.getElementById('opruimen').classList.toggle('verborgen', af.length === 0);
+  document.getElementById('bood-kop').innerHTML =
+    `<button class="terug" onclick="sluitWinkel()">← Alle winkels</button>`;
+
+  const opLijst = new Set(o.map(i => i.naam.toLowerCase()));
+  const snel = favorieten
+    .filter(f => (f.shop_id || 'overig') === g.id && !opLijst.has(f.naam.toLowerCase()));
+
+  let html = `
+    <div class="detail-kop" style="background:${tint(g.kleur,.12)};border-color:${tint(g.kleur,.45)}">
+      <span class="tegel-emoji">${esc(g.emoji)}</span>
+      <div>
+        <div style="font-family:Nunito;font-weight:800;font-size:1.15rem">${esc(g.naam)}</div>
+        <div style="font-size:.8rem;font-weight:700;color:${donker(g.kleur)}">
+          ${o.length ? o.length + (o.length === 1 ? ' ding nodig' : ' dingen nodig') : 'niets nodig'}</div>
+      </div>
+    </div>
+
+    <div class="toevoegrij">
+      <input type="text" id="item-invoer" placeholder="Wat is er nodig?" autocomplete="off">
+      <button onclick="voegItemToe()" aria-label="Toevoegen">+</button>
+    </div>`;
+
+  if(snel.length){
+    html += `<div class="snelrij">` + snel.map(f =>
+      `<button class="snel" onclick="voegFavorietToe('${esc(f.naam)}')">+ ${esc(f.naam)}</button>`).join('') + `</div>`;
+  }
+
+  html += `<div style="margin-top:18px">` + (o.map(rij).join('') ||
+    `<div class="leeg">Niets nodig hier.</div>`) + `</div>`;
+
+  if(a.length){
+    html += `<div class="kopje">AFGEVINKT</div>` + a.map(rij).join('');
+    html += `<button class="knop licht" style="margin-top:12px" onclick="wisAfgevinkt()">
+               Afgevinkte wissen</button>`;
+  }
+
+  document.getElementById('bood-inhoud').innerHTML = html;
+
+  const veld = document.getElementById('item-invoer');
+  veld.addEventListener('keydown', e => { if(e.key === 'Enter') voegItemToe(); });
 }
 
 function rij(i){
@@ -519,7 +559,8 @@ function rij(i){
   </div>`;
 }
 
-function zetFilter(id){ filterShop = id; tekenBoodschappen(); }
+function openWinkel(id){ openTegel = id; tekenBoodschappen(); window.scrollTo(0,0); }
+function sluitWinkel(){ openTegel = null; tekenBoodschappen(); window.scrollTo(0,0); }
 
 /* ============================================================
    5. Boodschapacties
@@ -527,7 +568,7 @@ function zetFilter(id){ filterShop = id; tekenBoodschappen(); }
 async function voegItemToe(){
   const veld = document.getElementById('item-invoer');
   const tekst = veld.value.trim();
-  if(!tekst){ return; }
+  if(!tekst) return;
 
   // "2 melk" of "melk 2" -> naam en aantal apart
   let naam = tekst, aantal = null;
@@ -536,17 +577,19 @@ async function voegItemToe(){
   if(voor){ aantal = voor[1]; naam = voor[2]; }
   else if(na){ naam = na[1]; aantal = na[2]; }
 
-  const shop = document.getElementById('winkel-keuze').value || null;
   veld.value = '';
   const { error } = await sb.rpc('voeg_item_toe', {
-    p_household_id: huidig.household_id, p_naam: naam, p_aantal: aantal, p_shop_id: shop });
+    p_household_id: huidig.household_id, p_naam: naam, p_aantal: aantal,
+    p_shop_id: openTegel === 'overig' ? null : openTegel });
   if(error){ melding(error.message, true); return; }
-  laadBoodschappen();
+  await laadBoodschappen();
+  document.getElementById('item-invoer')?.focus();
 }
 
-async function voegFavorietToe(naam, shop){
+async function voegFavorietToe(naam){
   const { error } = await sb.rpc('voeg_item_toe', {
-    p_household_id: huidig.household_id, p_naam: naam, p_aantal: null, p_shop_id: shop || null });
+    p_household_id: huidig.household_id, p_naam: naam, p_aantal: null,
+    p_shop_id: openTegel === 'overig' ? null : openTegel });
   if(error){ melding(error.message, true); return; }
   laadBoodschappen();
 }
@@ -577,7 +620,9 @@ async function wisselFavoriet(naam, shop, isFav){
 }
 
 async function wisAfgevinkt(){
-  const { data, error } = await sb.rpc('wis_afgevinkt', { p_household_id: huidig.household_id });
+  const { data, error } = await sb.rpc('wis_afgevinkt', {
+    p_household_id: huidig.household_id,
+    p_shop_id: openTegel === 'overig' ? null : openTegel });
   if(error){ melding(error.message, true); return; }
   melding(data + (data === 1 ? ' boodschap gewist' : ' boodschappen gewist'));
   laadBoodschappen();
@@ -587,12 +632,52 @@ async function wisAfgevinkt(){
    6. Winkelbeheer
    ============================================================ */
 function tekenWinkelbeheer(){
-  document.getElementById('lijst-winkels').innerHTML = winkels.map(w => `
-    <div class="lid">
-      <div style="font-size:1.4rem;width:32px;text-align:center">${esc(w.emoji)}</div>
+  document.getElementById('lijst-winkels').innerHTML = winkels.map(w => {
+    if(winkelBewerk === w.id){
+      const kleur = bewerkKleur || w.kleur || '#63B455';
+      return `<div style="padding:14px 0;border-bottom:1px solid var(--lijn)">
+        <div style="display:flex;gap:8px">
+          <input type="text" id="bew-emoji" value="${esc(w.emoji)}" maxlength="4"
+                 style="flex:0 0 64px;text-align:center;font-size:1.2rem" aria-label="Icoon">
+          <input type="text" id="bew-naam" value="${esc(w.naam)}" aria-label="Naam">
+        </div>
+        <div class="kleuren klein">${KLEUREN.map(k =>
+          `<button style="background:${k}" aria-pressed="${k.toLowerCase() === kleur.toLowerCase()}"
+                   onclick="kiesWinkelkleur('${k}')" aria-label="Kleur ${k}"></button>`).join('')}</div>
+        <div style="display:flex;gap:8px">
+          <button class="mini vol" onclick="slaWinkelOp('${w.id}')">Opslaan</button>
+          <button class="mini" onclick="stopBewerken()">Annuleren</button>
+          <button class="mini gevaar" style="margin-left:auto"
+                  onclick="verwijderWinkel('${w.id}','${esc(w.naam)}')">Weg</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="lid">
+      <div style="font-size:1.4rem;width:34px;text-align:center">${esc(w.emoji)}</div>
       <div class="lid-tekst"><div class="lid-naam">${esc(w.naam)}</div></div>
-      <button class="mini gevaar" onclick="verwijderWinkel('${w.id}','${esc(w.naam)}')">Weg</button>
-    </div>`).join('') || '<p style="margin:0">Nog geen winkels.</p>';
+      <span style="width:14px;height:14px;border-radius:50%;background:${esc(w.kleur || '#63B455')}"></span>
+      <button class="mini" onclick="startBewerken('${w.id}')">Wijzig</button>
+    </div>`;
+  }).join('') || '<p style="margin:0">Nog geen winkels.</p>';
+}
+
+function startBewerken(id){
+  winkelBewerk = id;
+  bewerkKleur = (winkels.find(w => w.id === id) || {}).kleur || '#63B455';
+  tekenWinkelbeheer();
+}
+function stopBewerken(){ winkelBewerk = null; bewerkKleur = null; tekenWinkelbeheer(); }
+function kiesWinkelkleur(k){ bewerkKleur = k; tekenWinkelbeheer(); }
+
+async function slaWinkelOp(id){
+  const naam  = document.getElementById('bew-naam').value.trim();
+  const emoji = document.getElementById('bew-emoji').value.trim();
+  const { error } = await sb.rpc('hernoem_winkel', {
+    p_shop_id: id, p_naam: naam, p_emoji: emoji, p_kleur: bewerkKleur });
+  if(error){ melding(error.message, true); return; }
+  stopBewerken();
+  melding('Winkel bijgewerkt');
+  laadBoodschappen();
 }
 
 async function voegWinkelToe(){
@@ -600,8 +685,9 @@ async function voegWinkelToe(){
   const naam = veld.value.trim();
   if(!naam) return;
   veld.value = '';
+  const kleur = KLEUREN[winkels.length % KLEUREN.length];
   const { error } = await sb.rpc('voeg_winkel_toe', {
-    p_household_id: huidig.household_id, p_naam: naam, p_emoji: '🛍️' });
+    p_household_id: huidig.household_id, p_naam: naam, p_emoji: '🛍️', p_kleur: kleur });
   if(error){ melding(error.message, true); return; }
   laadBoodschappen();
 }
@@ -610,7 +696,8 @@ async function verwijderWinkel(id, naam){
   if(!confirm(naam + ' verwijderen? De boodschappen blijven staan onder Overig.')) return;
   const { error } = await sb.rpc('verwijder_winkel', { p_shop_id: id });
   if(error){ melding(error.message, true); return; }
-  if(filterShop === id) filterShop = 'alles';
+  if(openTegel === id) openTegel = null;
+  stopBewerken();
   laadBoodschappen();
 }
 
@@ -785,6 +872,19 @@ function toon(id){
   if(metNav) window.scrollTo(0, 0);
 }
 
+// kleur met doorzichtigheid, voor de tegelachtergrond
+function tint(hex, a){
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+// donkerdere variant van een kleur, zodat tekst leesbaar blijft
+function donker(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const f = v => Math.round(v * 0.62);
+  return `rgb(${f((n>>16)&255)},${f((n>>8)&255)},${f(n&255)})`;
+}
+
 function voornaam(){
   const n = gebruiker?.user_metadata?.full_name || gebruiker?.user_metadata?.name || gebruiker?.email || '';
   return n.split(' ')[0].split('@')[0];
@@ -813,9 +913,6 @@ function melding(tekst, fout){
 
 document.getElementById('code-invoer').addEventListener('input', e => {
   e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-});
-document.getElementById('item-invoer').addEventListener('keydown', e => {
-  if(e.key === 'Enter') voegItemToe();
 });
 document.getElementById('winkel-invoer').addEventListener('keydown', e => {
   if(e.key === 'Enter') voegWinkelToe();
