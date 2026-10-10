@@ -155,9 +155,9 @@
   .taakopties.een{grid-template-columns:1fr;margin-top:10px}
   .taakopties label{font-size:.75rem;color:var(--grijs);margin-bottom:4px}
   .taakopties select{margin:0;font-size:.92rem;padding:10px 12px}
-  input[type=date]{width:100%;min-height:44px;padding:9px 12px;font:inherit;font-size:.92rem;color:inherit;
+  input[type=date],input[type=time]{width:100%;min-height:44px;padding:9px 12px;font:inherit;font-size:.92rem;color:inherit;
     background:#FCFAF5;border:1.5px solid var(--lijn);border-radius:12px}
-  input[type=date]:focus{background:#fff;border-color:var(--teal)}
+  input[type=date]:focus,input[type=time]:focus{background:#fff;border-color:var(--teal)}
   .bol.klein{width:28px;height:28px;flex:0 0 28px;font-size:.8rem}
   .datum{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;
          margin-left:6px;background:var(--teal-zacht);color:var(--teal-diep);vertical-align:1px}
@@ -168,11 +168,41 @@
   .preview .datum{flex:0 0 auto;font-size:.66rem;padding:1px 6px;margin-left:0}
   .item.af .item-tekst em{display:inline-block;text-decoration:none}
 
+  /* ---- agenda ---- */
+  .weeknav{display:flex;gap:8px;align-items:center;margin-top:-6px}
+  .weeknav .mini{min-width:40px;white-space:nowrap}
+  .persoonfilter{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;
+    background:#fff;border:1.5px solid var(--lijn);border-radius:20px;font-size:.85rem;font-weight:700;color:var(--inkt)}
+  .persoonfilter[aria-pressed=false]{opacity:.45;background:transparent}
+  .persoonfilter[aria-pressed=false] span{text-decoration:line-through}
+  .persoonfilter:focus-visible,.afspraak:focus-visible{outline:3px solid var(--geel);outline-offset:2px}
+  .bol.mini-bol{width:22px;height:22px;flex:0 0 22px;font-size:.66rem;border:2px solid #fff;margin-left:-6px}
+  .bol.mini-bol:first-child{margin-left:0}
+  .dag{margin-top:18px}
+  .dag-kop{display:flex;align-items:baseline;gap:8px;margin:0 0 8px 4px}
+  .dag-naam{font-family:Nunito,sans-serif;font-weight:800;font-size:1rem;text-transform:capitalize}
+  .dag-datum{font-size:.82rem;color:var(--grijs);font-weight:600}
+  .dag.vandaag .dag-naam{color:var(--teal-diep)}
+  .dag.vandaag .dag-datum{background:var(--teal-diep);color:#fff;padding:1px 8px;border-radius:20px}
+  .dag-leeg{font-size:.85rem;color:var(--grijs);padding:0 0 4px 4px}
+  .afspraak{background:#fff;border:1px solid var(--lijn);border-left:5px solid;border-radius:14px;
+    padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .afspraak-rij{display:flex;align-items:center;gap:10px}
+  .afspraak-tijd{font-size:.76rem;font-weight:700;color:var(--grijs)}
+  .afspraak-titel{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .afspraak.open .afspraak-titel{white-space:normal}
+  .afspraak-wie{display:flex;flex:0 0 auto}
+  .afspraak-meer{margin-top:8px;padding-top:8px;border-top:1px solid var(--lijn);font-size:.86rem;
+    color:var(--grijs);display:grid;gap:4px}
+  .afspraak-meer a{color:var(--teal-diep);font-weight:700}
+  .vinkregel{display:flex;align-items:center;gap:10px;font-size:.92rem;font-weight:600;margin-bottom:14px}
+  .vinkregel input{width:20px;height:20px;accent-color:var(--teal-diep)}
+
   /* ---- navigatiebalk ---- */
   .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--lijn);
        display:flex;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:40}
   .nav button{flex:1;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;
-              padding:8px 0;color:var(--grijs);font-size:.72rem;font-weight:700;border-radius:0}
+              padding:8px 0;color:var(--grijs);font-size:.7rem;font-weight:700;border-radius:0}
   .nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;
                   stroke-linecap:round;stroke-linejoin:round}
   .nav button[aria-pressed=true]{color:var(--teal-diep)}
@@ -255,6 +285,13 @@
     <div class="voet"><button onclick="uitloggen()">Uitloggen</button></div>
   </section>
 
+  <!-- agenda -->
+  <section id="s-agenda" class="verborgen">
+    <div id="agenda-kop"></div>
+    <div id="agenda-paneel"></div>
+    <div id="agenda-lijst"></div>
+  </section>
+
   <!-- boodschappen -->
   <section id="s-boodschappen" class="verborgen">
     <div id="bood-kop"></div>
@@ -332,6 +369,10 @@
 
 <!-- navigatie -->
 <nav class="nav verborgen" id="navbalk">
+  <button id="tab-agenda" onclick="gaNaar('s-agenda')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18"/><path d="M8 2.5v4"/><path d="M16 2.5v4"/></svg>
+    Agenda
+  </button>
   <button id="tab-boodschappen" onclick="gaNaar('s-boodschappen')">
     <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
     Boodschappen
@@ -369,6 +410,13 @@ let actieveTab = 's-boodschappen';
 let taken = [];
 let openPersoon = null;        // null = overzicht, anders een member-id of 'iedereen'
 let rasterPersoon = null;      // gekozen gezinslid in het invoerveld van het overzicht
+let agendaWeek = maandagVan(new Date());   // maandag van de week die je bekijkt
+let agendaAfspraken = [], agendaProblemen = [], agendaFout = '';
+let agendaBezig = false, agendaSleutel = '', agendaGeladenVoor = '';
+let agendaVerborgen = new Set(); // gezinsleden die je even uit het overzicht haalt
+let agendaOpen = null;           // afspraak die uitgeklapt is
+let agendaPaneel = null;         // null, 'agendas' of 'nieuw'
+let mijnGedeeld = [], mijnAgendaLijst = null;
 
 /* ============================================================
    2. Inloggen
@@ -435,10 +483,11 @@ async function laadAlles(){
     toon('s-wachten'); return;
   }
 
-  await Promise.all([laadLeden(), laadBoodschappen(), laadTaken()]);
+  await Promise.all([laadLeden(), laadBoodschappen(), laadTaken(), laadGedeeldeAgendas()]);
   tekenHuishouden();
   startRealtime();
   toon(actieveTab);
+  if(actieveTab === 's-agenda') laadAgenda();
 }
 
 async function laadLeden(){
@@ -1083,7 +1132,370 @@ async function wisGedaneTaken(){
 }
 
 /* ============================================================
-   8. Huishouden tekenen
+   8. Agenda: weekoverzicht uit Google Agenda
+   ============================================================ */
+const TIJDZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam';
+
+// alles wat met Google praat loopt via de Edge Function 'agenda'
+async function agendaVraag(actie, extra = {}){
+  const { data, error } = await sb.functions.invoke('agenda', {
+    body: { actie, household_id: huidig.household_id, ...extra } });
+  if(error){
+    let tekst = error.message;
+    try { const j = await error.context.json(); if(j?.error) tekst = j.error; } catch {}
+    throw new Error(tekst);
+  }
+  return data;
+}
+
+/* ---- datums ---- */
+function maandagVan(d){
+  const m = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+  return m;
+}
+function plusDagen(d, n){ const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function isoDag(d){
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function lokaleDag(iso){ const [j, m, d] = iso.split('-').map(Number); return new Date(j, m - 1, d); }
+function tijd(d){ return d.toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' }); }
+
+function weekTitel(){
+  const zo = plusDagen(agendaWeek, 6);
+  const zelfdeMaand = agendaWeek.getMonth() === zo.getMonth();
+  const van = agendaWeek.toLocaleDateString('nl-NL', zelfdeMaand ? { day:'numeric' } : { day:'numeric', month:'long' });
+  return van + ' – ' + zo.toLocaleDateString('nl-NL', { day:'numeric', month:'long' });
+}
+
+// begin en eind van een afspraak als Date (hele dag: eind is de dag erna, 00:00)
+function afspraakTijden(a){
+  return a.heleDag
+    ? { s: lokaleDag(a.start), e: lokaleDag(a.eind) }
+    : { s: new Date(a.start),  e: new Date(a.eind) };
+}
+
+function afsprakenOp(dag){
+  const begin = dag, eind = plusDagen(dag, 1);
+  return agendaAfspraken
+    .filter(a => a.leden.some(id => !agendaVerborgen.has(id)))
+    .filter(a => { const t = afspraakTijden(a); return t.s < eind && t.e > begin; })
+    .sort((x, y) => (y.heleDag - x.heleDag) || (afspraakTijden(x).s - afspraakTijden(y).s));
+}
+
+function tijdLabel(a, dag){
+  if(a.heleDag) return 'Hele dag';
+  const { s, e } = afspraakTijden(a), eind = plusDagen(dag, 1);
+  const startVandaag = s >= dag, eindVandaag = e <= eind;
+  if(startVandaag && eindVandaag) return tijd(s) + ' – ' + tijd(e);
+  if(startVandaag) return 'vanaf ' + tijd(s);
+  if(eindVandaag)  return 'tot ' + tijd(e);
+  return 'Hele dag';
+}
+
+/* ---- laden ---- */
+async function laadAgenda(){
+  if(!huidig) return;
+  const sleutel = isoDag(agendaWeek) + '|' + huidig.household_id;
+  agendaSleutel = sleutel;
+  agendaBezig = true; tekenAgenda();
+  try {
+    const data = await agendaVraag('week', {
+      van: agendaWeek.toISOString(), tot: plusDagen(agendaWeek, 7).toISOString() });
+    if(agendaSleutel !== sleutel) return;           // intussen naar een andere week gegaan
+    agendaAfspraken = data.afspraken || [];
+    agendaProblemen = data.problemen || [];
+    agendaFout = '';
+    agendaGeladenVoor = sleutel;
+  } catch(e){
+    if(agendaSleutel !== sleutel) return;
+    agendaFout = e.message;
+  }
+  agendaBezig = false;
+  tekenAgenda();
+}
+
+async function laadGedeeldeAgendas(){
+  const { data, error } = await sb.from('shared_calendars').select('calendar_id, naam')
+    .eq('household_id', huidig.household_id).eq('user_id', gebruiker.id);
+  if(error){ console.warn(error.message); return; }
+  mijnGedeeld = data || [];
+}
+
+/* ---- tekenen ---- */
+function tekenAgenda(){
+  if(!huidig || !leden.length) return;
+  const actief = leden.filter(l => l.status === 'actief');
+
+  document.getElementById('agenda-kop').innerHTML = `
+    <div class="kop">
+      <img src="icons/beeldmerk-transparant.png" alt="" onerror="this.style.display='none'">
+      <div style="flex:1;min-width:0">
+        <h1>Agenda</h1>
+        <div class="kop-sub">${weekTitel()}</div>
+      </div>
+    </div>
+    <div class="weeknav">
+      <button class="mini" onclick="verschuifWeek(-1)" aria-label="Vorige week">‹</button>
+      <button class="mini" onclick="verschuifWeek(0)">Deze week</button>
+      <button class="mini" onclick="verschuifWeek(1)" aria-label="Volgende week">›</button>
+      <button class="mini" style="margin-left:auto" onclick="openAgendaPaneel('agendas')">Mijn agenda's</button>
+    </div>
+    <div class="snelrij" style="padding-top:12px">${actief.map(l => {
+      const uit = agendaVerborgen.has(l.id);
+      return `<button class="persoonfilter" aria-pressed="${!uit}" onclick="wisselAgendaPersoon('${l.id}')">
+        ${bol(l, 'klein')}<span>${esc(voornaamVan(l.naam || l.email))}</span></button>`;
+    }).join('')}</div>`;
+
+  let html = '';
+
+  if(agendaFout){
+    html += `<div class="kaart tint" style="margin-bottom:14px"><h3>Agenda laden lukt niet</h3>
+      <p>${esc(agendaFout)}</p>
+      <button class="knop licht" onclick="laadAgenda()">Opnieuw proberen</button></div>`;
+  }
+
+  if(!mijnGedeeld.length && agendaPaneel !== 'agendas'){
+    html += `<div class="kaart tint" style="margin-bottom:14px"><h3>Jouw agenda is nog privé</h3>
+      <p>Kies welke Google-agenda's het gezin mag zien. Pas daarna kun je ook afspraken toevoegen.</p>
+      <button class="knop" onclick="openAgendaPaneel('agendas')">Agenda's kiezen</button></div>`;
+  }
+
+  if(agendaProblemen.length){
+    const namen = [...new Set(agendaProblemen.map(p => p.member_id))]
+      .map(id => leden.find(l => l.id === id)).filter(Boolean)
+      .map(l => l.user_id === gebruiker.id ? 'jij' : voornaamVan(l.naam || l.email));
+    const ikOok = agendaProblemen.some(p => leden.find(l => l.id === p.member_id)?.user_id === gebruiker.id);
+    html += `<div class="kaart tint" style="margin-bottom:14px">
+      <p style="margin:0">De agenda van ${esc(namen.join(' en '))} kan niet worden opgehaald.
+      ${ikOok ? 'Log opnieuw in om dat te herstellen.' : 'Die persoon moet uitloggen en opnieuw inloggen.'}</p>
+      ${ikOok ? '<button class="knop licht" style="margin-top:12px" onclick="inloggen()">Opnieuw inloggen</button>' : ''}</div>`;
+  }
+
+  if(mijnGedeeld.length && agendaPaneel !== 'nieuw'){
+    html += `<button class="knop oranje" style="margin-bottom:16px" onclick="openAgendaPaneel('nieuw')">Afspraak toevoegen</button>`;
+  }
+
+  const vandaag = isoDag(new Date());
+  const eersteKeer = agendaBezig && agendaGeladenVoor !== agendaSleutel;
+  for(let i = 0; i < 7; i++){
+    const dag = plusDagen(agendaWeek, i);
+    const lijst = eersteKeer ? [] : afsprakenOp(dag);
+    const isVandaag = isoDag(dag) === vandaag;
+    html += `<div class="dag ${isVandaag ? 'vandaag' : ''}">
+      <div class="dag-kop">
+        <span class="dag-naam">${isVandaag ? 'Vandaag' : dag.toLocaleDateString('nl-NL', { weekday:'long' })}</span>
+        <span class="dag-datum">${dag.toLocaleDateString('nl-NL', { day:'numeric', month:'short' })}</span>
+      </div>
+      ${eersteKeer ? '<div class="dag-leeg">Laden…</div>'
+        : lijst.length ? lijst.map(a => afspraakRij(a, dag)).join('')
+        : '<div class="dag-leeg">Niets gepland</div>'}
+    </div>`;
+  }
+
+  document.getElementById('agenda-lijst').innerHTML = html;
+}
+
+function afspraakRij(a, dag){
+  const wie = a.leden.map(id => leden.find(l => l.id === id)).filter(Boolean);
+  const kleur = wie[0]?.kleur || '#249C9C';
+  const sleutel = a.id + '|' + isoDag(dag);
+  const open = agendaOpen === sleutel;
+  return `<div class="afspraak ${open ? 'open' : ''}" style="border-left-color:${esc(kleur)}"
+      role="button" tabindex="0" aria-expanded="${open}"
+      onclick="wisselAfspraak('${esc(sleutel)}')" onkeydown="if(event.key==='Enter')wisselAfspraak('${esc(sleutel)}')">
+    <div class="afspraak-rij">
+      <div style="flex:1;min-width:0">
+        <div class="afspraak-tijd">${tijdLabel(a, dag)}</div>
+        <div class="afspraak-titel">${esc(a.titel)}</div>
+      </div>
+      <div class="afspraak-wie">${wie.map(l => bol(l, 'mini-bol')).join('')}</div>
+    </div>
+    ${open ? `<div class="afspraak-meer">
+      ${a.locatie ? `<div>📍 ${esc(a.locatie)}</div>` : ''}
+      <div>${esc(wie.map(l => voornaamVan(l.naam || l.email)).join(', '))}${a.agenda ? ', agenda ' + esc(a.agenda) : ''}</div>
+      ${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Openen in Google Agenda</a>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+
+/* ---- paneel: mijn agenda's of nieuwe afspraak ---- */
+async function openAgendaPaneel(soort){
+  agendaPaneel = soort;
+  const p = document.getElementById('agenda-paneel');
+  p.innerHTML = `<div class="kaart" style="margin-bottom:16px"><p style="margin:0">Je agenda's ophalen…</p></div>`;
+  tekenAgenda();
+  window.scrollTo(0, 0);
+
+  try {
+    const data = await agendaVraag('agendas');
+    if(agendaPaneel !== soort) return;
+    mijnAgendaLijst = data;
+  } catch(e){
+    p.innerHTML = `<div class="kaart tint" style="margin-bottom:16px"><h3>Dat lukt nu niet</h3>
+      <p>${esc(e.message)}</p><button class="knop licht" onclick="sluitAgendaPaneel()">Sluiten</button></div>`;
+    return;
+  }
+
+  if(mijnAgendaLijst.geenToegang){
+    p.innerHTML = `<div class="kaart tint" style="margin-bottom:16px"><h3>Je agenda is niet gekoppeld</h3>
+      <p>Log opnieuw in met Google en geef toestemming voor je agenda.</p>
+      <button class="knop" onclick="inloggen()">Opnieuw inloggen</button>
+      <button class="knop licht" style="margin-top:10px" onclick="sluitAgendaPaneel()">Sluiten</button></div>`;
+    return;
+  }
+  if(soort === 'agendas') tekenAgendaKeuze(); else tekenNieuweAfspraak();
+}
+
+function sluitAgendaPaneel(){
+  agendaPaneel = null;
+  document.getElementById('agenda-paneel').innerHTML = '';
+  tekenAgenda();
+}
+
+function tekenAgendaKeuze(){
+  const lijst = mijnAgendaLijst.agendas.map(c => `
+    <div class="lid">
+      <span style="width:14px;height:14px;flex:0 0 14px;border-radius:50%;background:${esc(c.kleur || '#6E7A78')}"></span>
+      <div class="lid-tekst">
+        <div class="lid-naam">${esc(c.naam)}</div>
+        <div class="lid-sub">${c.primair ? 'Je hoofdagenda' : c.schrijven ? 'Je kunt erin schrijven' : 'Alleen lezen'}</div>
+      </div>
+      <button class="mini ${c.gedeeld ? 'vol' : ''}" aria-pressed="${c.gedeeld}"
+              onclick="wisselDelen('${esc(c.id)}')">${c.gedeeld ? 'Gedeeld' : 'Privé'}</button>
+    </div>`).join('') || '<p style="margin:0">Geen agenda\'s gevonden in je Google-account.</p>';
+
+  document.getElementById('agenda-paneel').innerHTML = `
+    <div class="kaart" style="margin-bottom:16px">
+      <h3>Mijn agenda's</h3>
+      <p>Wat op Gedeeld staat, ziet iedereen in ${esc(huishouden.naam)}. De rest blijft privé.</p>
+      ${lijst}
+      <button class="knop licht" style="margin-top:14px" onclick="sluitAgendaPaneel()">Klaar</button>
+    </div>`;
+}
+
+async function wisselDelen(id){
+  const c = mijnAgendaLijst.agendas.find(x => x.id === id);
+  if(!c) return;
+  const { error } = c.gedeeld
+    ? await sb.rpc('stop_delen_agenda', { p_household_id: huidig.household_id, p_calendar_id: id })
+    : await sb.rpc('deel_agenda', { p_household_id: huidig.household_id, p_calendar_id: id, p_naam: c.naam });
+  if(error){ melding(error.message, true); return; }
+  c.gedeeld = !c.gedeeld;
+  melding(c.gedeeld ? c.naam + ' is nu zichtbaar voor het gezin' : c.naam + ' is weer privé');
+  tekenAgendaKeuze();
+  await laadGedeeldeAgendas();
+  laadAgenda();
+}
+
+function tekenNieuweAfspraak(){
+  const schrijfbaar = mijnAgendaLijst.agendas.filter(c => c.gedeeld && c.schrijven);
+  if(!schrijfbaar.length){
+    document.getElementById('agenda-paneel').innerHTML = `
+      <div class="kaart tint" style="margin-bottom:16px"><h3>Geen agenda om in te schrijven</h3>
+        <p>Deel eerst een agenda waarin je zelf afspraken mag zetten, zoals je hoofdagenda.</p>
+        <button class="knop" onclick="openAgendaPaneel('agendas')">Agenda's kiezen</button>
+        <button class="knop licht" style="margin-top:10px" onclick="sluitAgendaPaneel()">Annuleren</button></div>`;
+    return;
+  }
+
+  // standaard: vandaag als die in deze week valt, anders de maandag
+  const vandaag = new Date();
+  const datum = (vandaag >= agendaWeek && vandaag < plusDagen(agendaWeek, 7)) ? isoDag(vandaag) : isoDag(agendaWeek);
+  const opties = schrijfbaar.map(c =>
+    `<option value="${esc(c.id)}" ${c.primair ? 'selected' : ''}>${esc(c.naam)}</option>`).join('');
+
+  document.getElementById('agenda-paneel').innerHTML = `
+    <div class="kaart" style="margin-bottom:16px">
+      <h3 style="margin-bottom:14px">Nieuwe afspraak</h3>
+      <label for="afs-titel">Wat</label>
+      <input type="text" id="afs-titel" placeholder="Bijvoorbeeld: Tandarts Tim" autocomplete="off" maxlength="200">
+      <label for="afs-datum">Datum</label>
+      <input type="date" id="afs-datum" value="${datum}" style="margin-bottom:14px">
+      <label class="vinkregel"><input type="checkbox" id="afs-heledag" onchange="wisselHeleDag()"> Hele dag</label>
+      <div class="taakopties" id="afs-tijden" style="margin:0 0 14px">
+        <div><label for="afs-begin">Van</label><input type="time" id="afs-begin" value="09:00" onchange="schuifEindtijd()"></div>
+        <div><label for="afs-eind">Tot</label><input type="time" id="afs-eind" value="10:00"></div>
+      </div>
+      <label for="afs-locatie">Waar (mag leeg)</label>
+      <input type="text" id="afs-locatie" autocomplete="off" maxlength="300">
+      ${schrijfbaar.length > 1 ? `<label for="afs-agenda">In agenda</label><select id="afs-agenda">${opties}</select>`
+        : `<input type="hidden" id="afs-agenda" value="${esc(schrijfbaar[0].id)}">`}
+      <button class="knop oranje" id="afs-opslaan" onclick="slaAfspraakOp()">Afspraak opslaan</button>
+      <button class="knop licht" style="margin-top:10px" onclick="sluitAgendaPaneel()">Annuleren</button>
+    </div>`;
+  document.getElementById('afs-titel').focus();
+}
+
+function wisselHeleDag(){
+  document.getElementById('afs-tijden').classList.toggle('verborgen',
+    document.getElementById('afs-heledag').checked);
+}
+
+// eindtijd schuift mee: altijd een uur na de begintijd
+function schuifEindtijd(){
+  const b = document.getElementById('afs-begin').value;
+  if(!b) return;
+  const [u, m] = b.split(':').map(Number);
+  const e = Math.min(u + 1, 23);
+  document.getElementById('afs-eind').value = String(e).padStart(2, '0') + ':' + (u >= 23 ? '59' : String(m).padStart(2, '0'));
+}
+
+async function slaAfspraakOp(){
+  const waarde = id => document.getElementById(id).value.trim();
+  const afspraak = {
+    titel: waarde('afs-titel'),
+    datum: waarde('afs-datum'),
+    heleDag: document.getElementById('afs-heledag').checked,
+    begin: waarde('afs-begin'),
+    eind: waarde('afs-eind'),
+    locatie: waarde('afs-locatie'),
+    calendar_id: waarde('afs-agenda'),
+    tijdzone: TIJDZONE,
+  };
+  if(!afspraak.titel){ melding('Vul in wat de afspraak is', true); return; }
+  if(!afspraak.datum){ melding('Kies een datum', true); return; }
+  if(!afspraak.heleDag && afspraak.eind <= afspraak.begin){
+    melding('De eindtijd moet na de begintijd liggen', true); return;
+  }
+
+  const knop = document.getElementById('afs-opslaan');
+  knop.disabled = true; knop.textContent = 'Opslaan…';
+  try {
+    await agendaVraag('nieuw', { afspraak });
+  } catch(e){
+    melding(e.message, true);
+    knop.disabled = false; knop.textContent = 'Afspraak opslaan';
+    return;
+  }
+  melding('Afspraak opgeslagen');
+  agendaWeek = maandagVan(lokaleDag(afspraak.datum));   // spring naar de week van de afspraak
+  sluitAgendaPaneel();
+  laadAgenda();
+}
+
+/* ---- bediening ---- */
+function verschuifWeek(n){
+  agendaWeek = n === 0 ? maandagVan(new Date()) : plusDagen(agendaWeek, 7 * n);
+  agendaOpen = null;
+  laadAgenda();
+}
+function wisselAgendaPersoon(id){
+  if(agendaVerborgen.has(id)) agendaVerborgen.delete(id); else agendaVerborgen.add(id);
+  tekenAgenda();
+}
+function wisselAfspraak(sleutel){
+  agendaOpen = agendaOpen === sleutel ? null : sleutel;
+  tekenAgenda();
+}
+
+// terug in de app na een tijdje weg: agenda verversen
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && actieveTab === 's-agenda' && huidig) laadAgenda();
+});
+
+/* ============================================================
+   9. Huishouden tekenen
    ============================================================ */
 function tekenHuishouden(){
   const beheerder = huidig.rol === 'beheerder';
@@ -1141,6 +1553,7 @@ function tekenHuishouden(){
        onclick="kiesKleur('${k}')"></button>`).join('');
 
   tekenTaken();   // namen en kleuren van gezinsleden staan ook op het takenscherm
+  tekenAgenda();  // en in de agenda
 }
 
 function letterkleur(hex){
@@ -1156,7 +1569,7 @@ function bol(l, klasse = ''){
 }
 
 /* ============================================================
-   9. Huishoudacties
+   10. Huishoudacties
    ============================================================ */
 async function maakHuishouden(){
   const naam = document.getElementById('nieuw-naam').value.trim();
@@ -1241,15 +1654,19 @@ async function slaProfielOp(){
 }
 
 /* ============================================================
-   10. Navigatie en helpers
+   11. Navigatie en helpers
    ============================================================ */
-function gaNaar(id){ actieveTab = id; toon(id); }
+function gaNaar(id){
+  actieveTab = id; toon(id);
+  if(id === 's-agenda') laadAgenda();
+}
 
 function toon(id){
-  ['s-laden','s-login','s-start','s-wachten','s-boodschappen','s-taken','s-huis']
+  ['s-laden','s-login','s-start','s-wachten','s-agenda','s-boodschappen','s-taken','s-huis']
     .forEach(s => document.getElementById(s).classList.toggle('verborgen', s !== id));
-  const metNav = (id === 's-boodschappen' || id === 's-taken' || id === 's-huis');
+  const metNav = ['s-agenda','s-boodschappen','s-taken','s-huis'].includes(id);
   document.getElementById('navbalk').classList.toggle('verborgen', !metNav);
+  document.getElementById('tab-agenda').setAttribute('aria-pressed', id === 's-agenda');
   document.getElementById('tab-boodschappen').setAttribute('aria-pressed', id === 's-boodschappen');
   document.getElementById('tab-taken').setAttribute('aria-pressed', id === 's-taken');
   document.getElementById('tab-huis').setAttribute('aria-pressed', id === 's-huis');
@@ -1303,7 +1720,7 @@ document.getElementById('winkel-invoer').addEventListener('keydown', e => {
 });
 
 /* ============================================================
-   11. Service worker
+   12. Service worker
    ============================================================ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
