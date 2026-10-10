@@ -125,6 +125,9 @@
   .toevoegrij button{flex:0 0 52px;background:var(--oranje);color:#fff;font-size:1.5rem;font-weight:700;
                      border-radius:12px;line-height:1}
   .toevoegrij button:hover{background:#DD7C00}
+  .toevoegkaart{background:var(--kaart);border:1px solid var(--lijn);border-radius:var(--radius);
+                padding:14px 16px;margin-bottom:18px;box-shadow:0 1px 2px rgba(22,64,63,.04)}
+  .winkelkeuze{margin:12px 0 0;font-size:.92rem;padding:10px 12px}
 
   .snelrij{display:flex;gap:8px;overflow-x:auto;padding:14px 0 2px;scrollbar-width:none}
   .snelrij::-webkit-scrollbar{display:none}
@@ -330,6 +333,7 @@ const KLEUREN = ['#249C9C','#F58A00','#63B455','#FBD024','#E2603A','#14706F','#9
 let gebruiker = null, lidmaatschappen = [], huidig = null, huishouden = null, leden = [];
 let winkels = [], items = [], favorieten = [];
 let openTegel = null;          // null = raster, anders een winkel-id of 'overig'
+let rasterWinkel = '';         // gekozen winkel in het invoerveld van het overzicht
 let winkelBewerk = null;       // id van de winkel die je aan het hernoemen bent
 let bewerkKleur = null;
 let laatsteCode = '', kanaal = null;
@@ -498,7 +502,32 @@ function tekenRaster(){
       </div>`;
   }).join('');
 
-  document.getElementById('bood-inhoud').innerHTML = `<div class="tegels">${tegels}</div>`;
+  const opties = `<option value="">Geen winkel</option>` + winkels.map(w =>
+    `<option value="${w.id}" ${rasterWinkel === w.id ? 'selected' : ''}>${esc(w.emoji)} ${esc(w.naam)}</option>`).join('');
+
+  const toevoegen = `
+    <div class="kaart" style="padding:14px 16px;margin-bottom:16px">
+      <div class="toevoegrij">
+        <input type="text" id="raster-invoer" placeholder="Wat is er nodig?" autocomplete="off">
+        <button onclick="voegItemToeRaster()" aria-label="Toevoegen">+</button>
+      </div>
+      <select id="raster-winkel" aria-label="Winkel" onchange="rasterWinkel = this.value"
+              style="margin:12px 0 0;font-size:.92rem;padding:10px 12px">${opties}</select>
+    </div>`;
+
+  const opLijst = new Set(open.map(i => i.naam.toLowerCase()));
+  const snel = favorieten.filter(f => !opLijst.has(f.naam.toLowerCase()));
+  const snelrij = snel.length
+    ? `<div class="snelrij" style="padding-top:0;padding-bottom:14px">` + snel.map(f =>
+        `<button class="snel" onclick="voegFavorietToe('${esc(f.naam)}','${f.shop_id || ''}')">+ ${esc(f.naam)}</button>`
+      ).join('') + `</div>`
+    : '';
+
+  document.getElementById('bood-inhoud').innerHTML =
+    toevoegen + snelrij + `<div class="tegels">${tegels}</div>`;
+
+  document.getElementById('raster-invoer')
+    .addEventListener('keydown', e => { if(e.key === 'Enter') voegItemToeRaster(); });
 }
 
 function tekenDetail(){
@@ -531,7 +560,7 @@ function tekenDetail(){
 
   if(snel.length){
     html += `<div class="snelrij">` + snel.map(f =>
-      `<button class="snel" onclick="voegFavorietToe('${esc(f.naam)}')">+ ${esc(f.naam)}</button>`).join('') + `</div>`;
+      `<button class="snel" onclick="voegFavorietToe('${esc(f.naam)}','${g.id === 'overig' ? '' : g.id}')">+ ${esc(f.naam)}</button>`).join('') + `</div>`;
   }
 
   html += `<div style="margin-top:18px">` + (o.map(rij).join('') ||
@@ -565,33 +594,53 @@ function sluitWinkel(){ openTegel = null; tekenBoodschappen(); window.scrollTo(0
 /* ============================================================
    5. Boodschapacties
    ============================================================ */
+// "2 melk" of "melk 2" -> naam en aantal apart
+function splits(tekst){
+  const voor = tekst.match(/^(\d+[a-zA-Z]*)\s+(.+)$/);
+  const na   = tekst.match(/^(.+?)\s+(\d+[a-zA-Z]*)$/);
+  if(voor) return { naam: voor[2], aantal: voor[1] };
+  if(na)   return { naam: na[1],   aantal: na[2] };
+  return { naam: tekst, aantal: null };
+}
+
+async function bewaarItem(naam, aantal, shopId){
+  const { error } = await sb.rpc('voeg_item_toe', {
+    p_household_id: huidig.household_id, p_naam: naam, p_aantal: aantal,
+    p_shop_id: shopId || null });
+  if(error){ melding(error.message, true); return false; }
+  await laadBoodschappen();
+  return true;
+}
+
+// invoerveld binnen een geopende tegel
 async function voegItemToe(){
   const veld = document.getElementById('item-invoer');
   const tekst = veld.value.trim();
   if(!tekst) return;
-
-  // "2 melk" of "melk 2" -> naam en aantal apart
-  let naam = tekst, aantal = null;
-  const voor = tekst.match(/^(\d+[a-zA-Z]*)\s+(.+)$/);
-  const na   = tekst.match(/^(.+?)\s+(\d+[a-zA-Z]*)$/);
-  if(voor){ aantal = voor[1]; naam = voor[2]; }
-  else if(na){ naam = na[1]; aantal = na[2]; }
-
   veld.value = '';
-  const { error } = await sb.rpc('voeg_item_toe', {
-    p_household_id: huidig.household_id, p_naam: naam, p_aantal: aantal,
-    p_shop_id: openTegel === 'overig' ? null : openTegel });
-  if(error){ melding(error.message, true); return; }
-  await laadBoodschappen();
+  const { naam, aantal } = splits(tekst);
+  await bewaarItem(naam, aantal, openTegel === 'overig' ? null : openTegel);
   document.getElementById('item-invoer')?.focus();
 }
 
-async function voegFavorietToe(naam){
-  const { error } = await sb.rpc('voeg_item_toe', {
-    p_household_id: huidig.household_id, p_naam: naam, p_aantal: null,
-    p_shop_id: openTegel === 'overig' ? null : openTegel });
-  if(error){ melding(error.message, true); return; }
-  laadBoodschappen();
+// invoerveld op het overzichtsscherm, met eigen winkelkeuze
+async function voegItemToeRaster(){
+  const veld = document.getElementById('raster-invoer');
+  const tekst = veld.value.trim();
+  if(!tekst) return;
+  rasterWinkel = document.getElementById('raster-winkel').value;
+  veld.value = '';
+  const { naam, aantal } = splits(tekst);
+  await bewaarItem(naam, aantal, rasterWinkel);
+  document.getElementById('raster-invoer')?.focus();
+}
+
+// vast product aantikken; shopId is leeg als hij nergens aan hangt
+async function voegFavorietToe(naam, shopId){
+  const doel = shopId !== undefined
+    ? shopId
+    : (openTegel === 'overig' ? null : openTegel);
+  await bewaarItem(naam, null, doel);
 }
 
 async function wisselItem(id){
