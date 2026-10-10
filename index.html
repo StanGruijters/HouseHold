@@ -496,8 +496,7 @@ function tekenRaster(){
           <span class="tegel-naam">${esc(g.naam)}</span>
         </div>
         <div class="tegel-aantal" style="color:${donker(g.kleur)}">
-          ${o.length ? o.length + (o.length === 1 ? ' ding' : ' dingen') : 'leeg'}
-          ${a.length ? ` · ${a.length} af` : ''}</div>
+          ${o.length ? o.length + (o.length === 1 ? ' ding' : ' dingen') : 'leeg'}</div>
         <ul class="preview">${lijst}</ul>
       </div>`;
   }).join('');
