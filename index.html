@@ -150,6 +150,24 @@
   .kopje{font-family:Nunito,sans-serif;font-weight:800;font-size:.82rem;color:var(--grijs);
          margin:20px 0 8px 4px}
 
+  /* ---- taken ---- */
+  .taakopties{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;margin-top:12px}
+  .taakopties.een{grid-template-columns:1fr;margin-top:10px}
+  .taakopties label{font-size:.75rem;color:var(--grijs);margin-bottom:4px}
+  .taakopties select{margin:0;font-size:.92rem;padding:10px 12px}
+  input[type=date]{width:100%;min-height:44px;padding:9px 12px;font:inherit;font-size:.92rem;color:inherit;
+    background:#FCFAF5;border:1.5px solid var(--lijn);border-radius:12px}
+  input[type=date]:focus{background:#fff;border-color:var(--teal)}
+  .bol.klein{width:28px;height:28px;flex:0 0 28px;font-size:.8rem}
+  .datum{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;
+         margin-left:6px;background:var(--teal-zacht);color:var(--teal-diep);vertical-align:1px}
+  .datum.vandaag{background:var(--geel-zacht);color:#8A6A00}
+  .datum.laat{background:#FBEEEA;color:var(--rood)}
+  .preview li.taak{display:flex;align-items:center;gap:4px}
+  .preview li.taak span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .preview .datum{flex:0 0 auto;font-size:.66rem;padding:1px 6px;margin-left:0}
+  .item.af .item-tekst em{display:inline-block;text-decoration:none}
+
   /* ---- navigatiebalk ---- */
   .nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--lijn);
        display:flex;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:40}
@@ -243,6 +261,12 @@
     <div id="bood-inhoud"></div>
   </section>
 
+  <!-- taken -->
+  <section id="s-taken" class="verborgen">
+    <div id="taak-kop"></div>
+    <div id="taak-inhoud"></div>
+  </section>
+
   <!-- huishouden -->
   <section id="s-huis" class="verborgen">
     <div class="kop">
@@ -312,6 +336,10 @@
     <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
     Boodschappen
   </button>
+  <button id="tab-taken" onclick="gaNaar('s-taken')">
+    <svg viewBox="0 0 24 24"><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="m3 6 1.5 1.5L7 4.5"/><path d="m3 12 1.5 1.5L7 10.5"/><path d="m3 18 1.5 1.5L7 16.5"/></svg>
+    Taken
+  </button>
   <button id="tab-huis" onclick="gaNaar('s-huis')">
     <svg viewBox="0 0 24 24"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 21v-7h6v7"/></svg>
     Huishouden
@@ -338,6 +366,9 @@ let winkelBewerk = null;       // id van de winkel die je aan het hernoemen bent
 let bewerkKleur = null;
 let laatsteCode = '', kanaal = null;
 let actieveTab = 's-boodschappen';
+let taken = [];
+let openPersoon = null;        // null = overzicht, anders een member-id of 'iedereen'
+let rasterPersoon = null;      // gekozen gezinslid in het invoerveld van het overzicht
 
 /* ============================================================
    2. Inloggen
@@ -404,7 +435,7 @@ async function laadAlles(){
     toon('s-wachten'); return;
   }
 
-  await Promise.all([laadLeden(), laadBoodschappen()]);
+  await Promise.all([laadLeden(), laadBoodschappen(), laadTaken()]);
   tekenHuishouden();
   startRealtime();
   toon(actieveTab);
@@ -440,6 +471,14 @@ async function laadBoodschappen(){
   tekenWinkelbeheer();
 }
 
+async function laadTaken(){
+  const { data, error } = await sb.from('tasks').select('*')
+    .eq('household_id', huidig.household_id).order('created_at');
+  if(error){ melding(error.message, true); return; }
+  taken = data || [];
+  tekenTaken();
+}
+
 function startRealtime(){
   if(kanaal) sb.removeChannel(kanaal);
   const f = 'household_id=eq.' + huidig.household_id;
@@ -447,6 +486,7 @@ function startRealtime(){
     .on('postgres_changes', { event:'*', schema:'public', table:'shopping_items', filter:f }, laadBoodschappen)
     .on('postgres_changes', { event:'*', schema:'public', table:'favorites',      filter:f }, laadBoodschappen)
     .on('postgres_changes', { event:'*', schema:'public', table:'shops',          filter:f }, laadBoodschappen)
+    .on('postgres_changes', { event:'*', schema:'public', table:'tasks',          filter:f }, laadTaken)
     .subscribe();
 }
 
@@ -750,7 +790,300 @@ async function verwijderWinkel(id, naam){
 }
 
 /* ============================================================
-   7. Huishouden tekenen
+   7. Taken: een lijst per gezinslid
+   ============================================================ */
+// eerst jijzelf, dan de andere gezinsleden, en 'Iedereen' voor taken zonder vaste persoon
+function persoonGroepen(){
+  const actief = leden.filter(l => l.status === 'actief');
+  const ik = actief.find(l => l.user_id === gebruiker.id);
+  const volgorde = ik ? [ik, ...actief.filter(l => l !== ik)] : actief;
+  const g = volgorde.map(l => ({
+    id:l.id, naam:l.naam || l.email || 'Gezinslid', kleur:l.kleur || '#249C9C', lid:l, ik:l === ik }));
+  g.push({ id:'iedereen', naam:'Iedereen', kleur:'#6E7A78', lid:null, ik:false });
+  return g;
+}
+
+// taken van iemand die niet meer actief lid is, vallen onder 'Iedereen'
+function groepVanTaak(t){
+  return leden.some(l => l.id === t.member_id && l.status === 'actief') ? t.member_id : 'iedereen';
+}
+
+// open taken: eerst op datum (zonder datum achteraan), gedane taken: nieuwste bovenaan
+function takenVan(id, gedaan){
+  const lijst = taken.filter(t => groepVanTaak(t) === id && !!t.checked === gedaan);
+  if(gedaan) return lijst.sort((a, b) => (b.checked_at || '').localeCompare(a.checked_at || ''));
+  return lijst.sort((a, b) => {
+    if(a.deadline && b.deadline && a.deadline !== b.deadline) return a.deadline.localeCompare(b.deadline);
+    if(a.deadline && !b.deadline) return -1;
+    if(!a.deadline && b.deadline) return 1;
+    return (a.created_at || '').localeCompare(b.created_at || '');
+  });
+}
+
+function dagenTot(datum){
+  const [j, m, d] = datum.split('-').map(Number);
+  const nu = new Date(); nu.setHours(0, 0, 0, 0);
+  return Math.round((new Date(j, m - 1, d) - nu) / 86400000);
+}
+
+function vandaagISO(){
+  const n = new Date();
+  return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+}
+
+function datumLabel(datum){
+  if(!datum) return '';
+  const d = dagenTot(datum), dag = new Date(datum + 'T12:00');
+  let tekst, soort = '';
+  if(d < 0)        { tekst = 'te laat';  soort = 'laat'; }
+  else if(d === 0) { tekst = 'vandaag';  soort = 'vandaag'; }
+  else if(d === 1)   tekst = 'morgen';
+  else if(d < 7)     tekst = dag.toLocaleDateString('nl-NL', { weekday:'long' });
+  else               tekst = dag.toLocaleDateString('nl-NL', { day:'numeric', month:'short' });
+  return `<span class="datum ${soort}">${tekst}</span>`;
+}
+
+function aantalTaken(n, achter = ''){
+  return n === 0 ? 'niets open' : n + (n === 1 ? ' taak' : ' taken') + achter;
+}
+
+function voornaamVan(n){ return String(n || '').split(' ')[0].split('@')[0]; }
+
+// wat je aan het typen bent blijft staan als het scherm opnieuw getekend wordt
+function bewaarInvoer(ids){
+  const s = {};
+  ids.forEach(id => {
+    const e = document.getElementById(id);
+    if(e) s[id] = { v:e.value, f:document.activeElement === e };
+  });
+  return s;
+}
+function zetInvoerTerug(s){
+  for(const id in s){
+    const e = document.getElementById(id);
+    if(!e) continue;
+    e.value = s[id].v;
+    if(s[id].f) e.focus();
+  }
+}
+
+function tekenTaken(){
+  if(!huidig || !leden.length) return;
+  const bewaard = bewaarInvoer(['taak-invoer','taak-datum','raster-taak-invoer','raster-taak-datum']);
+  if(openPersoon) tekenPersoon(); else tekenPersonen();
+  zetInvoerTerug(bewaard);
+}
+
+function tekenPersonen(){
+  const groepen = persoonGroepen();
+  if(!rasterPersoon || !groepen.some(g => g.id === rasterPersoon)) rasterPersoon = huidig.id;
+
+  const mijn = takenVan(huidig.id, false).length;
+  document.getElementById('taak-kop').innerHTML = `
+    <div class="kop">
+      <img src="icons/beeldmerk-transparant.png" alt="" onerror="this.style.display='none'">
+      <div>
+        <h1>Taken</h1>
+        <div class="kop-sub">${mijn === 0 ? 'Jij hebt niets openstaan'
+          : 'Jij hebt ' + mijn + (mijn === 1 ? ' taak' : ' taken') + ' open'}</div>
+      </div>
+    </div>`;
+
+  const tegels = groepen.map(g => {
+    const o = takenVan(g.id, false), a = takenVan(g.id, true);
+    if(g.id === 'iedereen' && o.length === 0 && a.length === 0) return '';
+
+    const laat = o.filter(t => t.deadline && dagenTot(t.deadline) < 0).length;
+    let lijst = o.slice(0, 4).map(t =>
+      `<li class="taak"><span>${esc(t.titel)}</span>${datumLabel(t.deadline)}</li>`).join('');
+    if(o.length > 4) lijst += `<li class="meer">+ ${o.length - 4} meer</li>`;
+    if(o.length === 0) lijst = `<li class="leegje">${a.length ? 'Alles gedaan' : 'Niets te doen'}</li>`;
+
+    const teken = g.lid ? bol(g.lid, 'klein') : `<span class="tegel-emoji">🏠</span>`;
+    return `<div class="tegel" role="button" tabindex="0"
+        style="background:${tint(g.kleur,.09)};border-color:${tint(g.kleur,.4)}"
+        onclick="openPersoonLijst('${g.id}')" onkeydown="if(event.key==='Enter')openPersoonLijst('${g.id}')">
+        <div class="tegel-kop">
+          ${teken}
+          <span class="tegel-naam">${esc(g.naam)}</span>
+        </div>
+        <div class="tegel-aantal" style="color:${donker(g.kleur)}">
+          ${aantalTaken(o.length)}${laat ? `, <span style="color:var(--rood)">${laat} te laat</span>` : ''}</div>
+        <ul class="preview">${lijst}</ul>
+      </div>`;
+  }).join('');
+
+  const opties = groepen.map(g =>
+    `<option value="${g.id}" ${rasterPersoon === g.id ? 'selected' : ''}>${esc(g.naam)}${g.ik ? ' (jij)' : ''}</option>`).join('');
+
+  const toevoegen = `
+    <div class="kaart" style="padding:14px 16px;margin-bottom:16px">
+      <div class="toevoegrij">
+        <input type="text" id="raster-taak-invoer" placeholder="Wat moet er gebeuren?" autocomplete="off" maxlength="200">
+        <button onclick="voegTaakToeRaster()" aria-label="Taak toevoegen">+</button>
+      </div>
+      <div class="taakopties">
+        <div>
+          <label for="raster-taak-persoon">Voor wie</label>
+          <select id="raster-taak-persoon" onchange="rasterPersoon = this.value">${opties}</select>
+        </div>
+        <div>
+          <label for="raster-taak-datum">Uiterlijk (mag leeg)</label>
+          <input type="date" id="raster-taak-datum" min="${vandaagISO()}">
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('taak-inhoud').innerHTML = toevoegen + `<div class="tegels">${tegels}</div>`;
+
+  document.getElementById('raster-taak-invoer')
+    .addEventListener('keydown', e => { if(e.key === 'Enter') voegTaakToeRaster(); });
+}
+
+function tekenPersoon(){
+  const g = persoonGroepen().find(x => x.id === openPersoon);
+  if(!g){ openPersoon = null; tekenPersonen(); return; }
+
+  const o = takenVan(g.id, false), a = takenVan(g.id, true);
+
+  document.getElementById('taak-kop').innerHTML =
+    `<button class="terug" onclick="sluitPersoon()">← Alle gezinsleden</button>`;
+
+  const teken = g.lid ? bol(g.lid) : `<span class="tegel-emoji">🏠</span>`;
+  const vraag = g.ik ? 'Wat moet jij nog doen?'
+              : g.lid ? 'Wat moet ' + esc(voornaamVan(g.naam)) + ' doen?'
+              : 'Wat moet er gebeuren?';
+
+  let html = `
+    <div class="detail-kop" style="background:${tint(g.kleur,.12)};border-color:${tint(g.kleur,.45)}">
+      ${teken}
+      <div>
+        <div style="font-family:Nunito;font-weight:800;font-size:1.15rem">${esc(g.naam)}${g.ik ? ' (jij)' : ''}</div>
+        <div style="font-size:.8rem;font-weight:700;color:${donker(g.kleur)}">${aantalTaken(o.length, ' open')}</div>
+      </div>
+    </div>
+
+    <div class="toevoegrij">
+      <input type="text" id="taak-invoer" placeholder="${vraag}" autocomplete="off" maxlength="200">
+      <button onclick="voegTaakToe()" aria-label="Taak toevoegen">+</button>
+    </div>
+    <div class="taakopties een">
+      <div>
+        <label for="taak-datum">Uiterlijk (mag leeg)</label>
+        <input type="date" id="taak-datum" min="${vandaagISO()}">
+      </div>
+    </div>`;
+
+  html += `<div style="margin-top:18px">` + (o.map(taakRij).join('') ||
+    `<div class="leeg">${g.ik ? 'Je hebt niets openstaan.' : 'Niets openstaan.'}</div>`) + `</div>`;
+
+  if(a.length){
+    html += `<div class="kopje">GEDAAN</div>` + a.map(taakRij).join('');
+    html += `<button class="knop licht" style="margin-top:12px" onclick="wisGedaneTaken()">
+               Gedane taken wissen</button>`;
+  }
+
+  document.getElementById('taak-inhoud').innerHTML = html;
+
+  document.getElementById('taak-invoer')
+    .addEventListener('keydown', e => { if(e.key === 'Enter') voegTaakToe(); });
+}
+
+function taakRij(t){
+  // zelfde regel als in de database: wie de taak maakte of een beheerder mag hem weghalen
+  const magWeg = huidig.rol === 'beheerder' || t.created_by === gebruiker.id;
+
+  // laat zien wie een taak afvinkte, als dat iemand anders was dan degene voor wie hij was
+  let door = '';
+  if(t.checked && t.checked_by){
+    const doener = leden.find(l => l.user_id === t.checked_by);
+    const voor   = leden.find(l => l.id === t.member_id);
+    if(doener && (!voor || voor.user_id !== t.checked_by))
+      door = `<em>door ${esc(voornaamVan(doener.naam || doener.email))}</em>`;
+  }
+
+  return `<div class="item ${t.checked ? 'af' : ''}">
+    <button class="vink" onclick="wisselTaak('${t.id}')" aria-label="${t.checked ? 'Terugzetten' : 'Afvinken'}">${t.checked ? '✓' : ''}</button>
+    <div class="item-tekst" onclick="wisselTaak('${t.id}')">${esc(t.titel)}${t.checked ? door : datumLabel(t.deadline)}</div>
+    ${magWeg ? `<button class="ikoon" onclick="verwijderTaak('${t.id}')" aria-label="Taak verwijderen">✕</button>` : ''}
+  </div>`;
+}
+
+function openPersoonLijst(id){ openPersoon = id; tekenTaken(); window.scrollTo(0,0); }
+function sluitPersoon(){ openPersoon = null; tekenTaken(); window.scrollTo(0,0); }
+
+/* ---- taakacties ---- */
+async function bewaarTaak(titel, memberId, deadline){
+  const { error } = await sb.rpc('voeg_taak_toe', {
+    p_household_id: huidig.household_id, p_titel: titel,
+    p_member_id: memberId || null, p_deadline: deadline || null });
+  if(error){ melding(error.message, true); return false; }
+  await laadTaken();
+  return true;
+}
+
+// invoerveld binnen de lijst van één persoon
+async function voegTaakToe(){
+  const veld = document.getElementById('taak-invoer');
+  const datum = document.getElementById('taak-datum');
+  const titel = veld.value.trim();
+  if(!titel) return;
+  const deadline = datum.value;
+  veld.value = ''; datum.value = '';
+  const gelukt = await bewaarTaak(titel, openPersoon === 'iedereen' ? null : openPersoon, deadline);
+  if(!gelukt){ veld.value = titel; datum.value = deadline; }
+  document.getElementById('taak-invoer')?.focus();
+}
+
+// invoerveld op het overzicht, met keuze voor wie
+async function voegTaakToeRaster(){
+  const veld = document.getElementById('raster-taak-invoer');
+  const datum = document.getElementById('raster-taak-datum');
+  const titel = veld.value.trim();
+  if(!titel) return;
+  rasterPersoon = document.getElementById('raster-taak-persoon').value;
+  const deadline = datum.value;
+  veld.value = ''; datum.value = '';
+  const gelukt = await bewaarTaak(titel, rasterPersoon === 'iedereen' ? null : rasterPersoon, deadline);
+  if(!gelukt){ veld.value = titel; datum.value = deadline; return; }
+  if(rasterPersoon !== huidig.id){
+    const g = persoonGroepen().find(x => x.id === rasterPersoon);
+    melding(g?.lid ? 'Taak gezet bij ' + voornaamVan(g.naam) : 'Taak gezet bij Iedereen');
+  }
+  document.getElementById('raster-taak-invoer')?.focus();
+}
+
+async function wisselTaak(id){
+  const t = taken.find(x => x.id === id);
+  if(t){                                   // meteen reageren, database volgt
+    t.checked = !t.checked;
+    t.checked_at = t.checked ? new Date().toISOString() : null;
+    t.checked_by = t.checked ? gebruiker.id : null;
+    tekenTaken();
+  }
+  const { error } = await sb.rpc('wissel_taak', { p_taak_id: id });
+  if(error) melding(error.message, true);
+  laadTaken();
+}
+
+async function verwijderTaak(id){
+  const { error } = await sb.rpc('verwijder_taak', { p_taak_id: id });
+  if(error){ melding(error.message, true); return; }
+  melding('Taak verwijderd');
+  laadTaken();
+}
+
+async function wisGedaneTaken(){
+  const { data, error } = await sb.rpc('wis_gedane_taken', {
+    p_household_id: huidig.household_id,
+    p_member_id: openPersoon === 'iedereen' ? null : openPersoon });
+  if(error){ melding(error.message, true); return; }
+  melding(data + (data === 1 ? ' taak gewist' : ' taken gewist'));
+  laadTaken();
+}
+
+/* ============================================================
+   8. Huishouden tekenen
    ============================================================ */
 function tekenHuishouden(){
   const beheerder = huidig.rol === 'beheerder';
@@ -806,6 +1139,8 @@ function tekenHuishouden(){
     `<button style="background:${k}" aria-label="Kleur ${k}"
        aria-pressed="${k.toLowerCase() === (huidig.kleur||'').toLowerCase()}"
        onclick="kiesKleur('${k}')"></button>`).join('');
+
+  tekenTaken();   // namen en kleuren van gezinsleden staan ook op het takenscherm
 }
 
 function letterkleur(hex){
@@ -814,14 +1149,14 @@ function letterkleur(hex){
   return l > 0.62 ? '#16403F' : '#FFFFFF';
 }
 
-function bol(l){
+function bol(l, klasse = ''){
   const kleur = l.kleur || '#249C9C';
   const letter = ((l.naam || l.email || '?').trim()[0] || '?').toUpperCase();
-  return `<div class="bol" style="background:${esc(kleur)};color:${letterkleur(kleur)}">${esc(letter)}</div>`;
+  return `<div class="bol ${klasse}" style="background:${esc(kleur)};color:${letterkleur(kleur)}">${esc(letter)}</div>`;
 }
 
 /* ============================================================
-   8. Huishoudacties
+   9. Huishoudacties
    ============================================================ */
 async function maakHuishouden(){
   const naam = document.getElementById('nieuw-naam').value.trim();
@@ -906,16 +1241,17 @@ async function slaProfielOp(){
 }
 
 /* ============================================================
-   9. Navigatie en helpers
+   10. Navigatie en helpers
    ============================================================ */
 function gaNaar(id){ actieveTab = id; toon(id); }
 
 function toon(id){
-  ['s-laden','s-login','s-start','s-wachten','s-boodschappen','s-huis']
+  ['s-laden','s-login','s-start','s-wachten','s-boodschappen','s-taken','s-huis']
     .forEach(s => document.getElementById(s).classList.toggle('verborgen', s !== id));
-  const metNav = (id === 's-boodschappen' || id === 's-huis');
+  const metNav = (id === 's-boodschappen' || id === 's-taken' || id === 's-huis');
   document.getElementById('navbalk').classList.toggle('verborgen', !metNav);
   document.getElementById('tab-boodschappen').setAttribute('aria-pressed', id === 's-boodschappen');
+  document.getElementById('tab-taken').setAttribute('aria-pressed', id === 's-taken');
   document.getElementById('tab-huis').setAttribute('aria-pressed', id === 's-huis');
   if(metNav) window.scrollTo(0, 0);
 }
@@ -967,7 +1303,7 @@ document.getElementById('winkel-invoer').addEventListener('keydown', e => {
 });
 
 /* ============================================================
-   10. Service worker
+   11. Service worker
    ============================================================ */
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
